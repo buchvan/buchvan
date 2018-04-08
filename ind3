@@ -1,0 +1,976 @@
+#include "stdafx.h"
+#include "time.h"
+#include "Dec.h"
+#include <iostream>
+#include "assert.h"
+#include "fstream"
+#include "locale.h"
+#include "conio.h"
+#include "Windows.h"
+#include <string.h>
+
+using namespace std;
+
+const int N = 50;  //максимальная длина имён файлов
+
+
+bool Defender(char *symb, int &n) {
+
+	/*Для защитного программирования.
+	Получает на вход массив символов.
+	Возвращает: true - если массив это число,
+	false - иначе; само число в целочисленной записи*/
+
+	int q = strlen(symb);
+	bool res = true;
+
+	for (int i = 0; i < q; i++) {
+
+		if (!(symb[i] >= '0' && symb[i] <= '9')) {
+			i = q;
+			res = false;
+		}
+
+	}
+
+	if (res) n = atoi(symb);
+
+	return res;
+}
+
+
+
+bool File_fill(DEC &A, char name_file[N], int &error, int &n) {
+
+	/*Чтение Дека из файла. На вход подается
+	имя файла. Возвращает Дек и res: true -
+	если файл существует, false - иначе*/
+
+	bool res = true;
+	strcat_s(name_file, 50, ".txt");
+	ifstream f(name_file);
+	error = 0;
+	n = 0;
+
+	if (f) {
+		char x;
+
+		do {
+
+			f >> x;
+
+			if (x != ' ') n++;
+
+		} while (!(f.eof()));
+
+		if (n == 0) res = false;
+
+		f.clear();
+		f.seekg(0);
+
+		if (res) {
+			DEC B(n);
+
+			do {
+
+				f >> x;
+
+				if (x != ' ') B.AddElemRight(x);
+
+			} while (!(f.eof()));
+
+			A = B;
+			f.close();
+		}
+
+	}
+	else res = false;
+
+	return res;
+}
+
+
+
+bool Saving(DEC A, char name_file[N], int n) {
+
+	/*Сохранение Дека в файл. Получает на вход
+	имя файла namefile и кол-во символов в Деке.
+	Возвращает res: false - некорректное имя,
+	true - завершено успешно*/
+
+	bool res;
+
+	if (A.Create()) {
+		ifstream g;
+		strcat_s(name_file, 50, ".txt");
+		g.open(name_file);
+
+		if (g) {  //то просим ввести другое имя
+			res = false;
+		}
+		else {
+			assert(!g);
+			g.close();
+			ofstream f(name_file);
+			char x, buf;
+			int size = A.GetSize();
+			size = n - 1;
+			int left = A.GetLeft();
+			int right = A.GetRight();
+			int error = 0;
+			f << n;
+			f << " ";
+			A.SeeElemLeft(buf);
+
+			while ((left != right) && (error == 0)) {
+				A.GetElemLeft(x);
+				error = A.GetError();
+
+				if (x != buf) {
+					f << x;
+					left++;
+				}
+
+			}
+
+			if (error != 0) res = false;
+
+			f.close();
+			res = true;
+		}
+
+	}
+	else res = false;
+
+	return  res;
+}
+
+
+
+
+
+void Output(DEC A, int n) {
+
+	/*Редактор Дека. Выводит Дек на консоль.
+	Получает на вход Дек и кол-во символов в нём*/
+
+	if (A.Create()) {
+		int error, i;
+		char buf, x, elem;
+		n = A.GetSize();
+		A.SeeElemLeft(buf);
+		error = A.GetError();
+		int start = A.GetLeft();
+		int finish = A.GetRight();
+		A.SeeElemLeft(buf);
+
+		if (error == 0) {
+			char t, word[N], bracket, course = '1';
+			int i, xx = 0, m, q = start, num;
+			bool flag;
+
+			HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+
+			do {
+				flag = true;
+				system("cls");
+
+				for (i = start; i <= finish; i++) {
+
+					if (i == q) {
+
+						A.GetElemLeft(elem);
+
+						if (elem != buf) {
+							SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_INTENSITY);
+							bracket = 91;
+							cout << bracket << elem;
+							bracket = 93;
+							cout << bracket;
+							SetConsoleTextAttribute(h, FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
+						}
+						else i--;
+
+						A.AddElemRight(elem);
+					}
+					else {
+
+						A.GetElemLeft(x);
+						bracket = 32;
+
+						if (x != buf) cout << bracket << x << bracket;
+						else i--;
+
+						A.AddElemRight(x);
+					}
+
+				}
+
+				for (i = finish; i > start; i--) {
+					A.GetElemRight(x);
+					A.AddElemLeft(x);
+
+					if (x == buf) i++;
+
+				}
+
+				if (course == '4') {    //Влево
+					q = q - 1;;
+
+					if (q < start) q = q + n - 1;
+
+					flag = false;
+					course = '1';
+				}
+
+				if (course == '6') {    //Вправо
+					q = q + 1;
+
+					if (q >= finish) q = q - n + 1;
+
+					flag = false;
+					course = '1';
+				}
+
+				if (course == 'm' || course == 'M') {    //Переместиться к элементу
+
+					do {
+						cout << endl << "Enter number of element in Dec in the mod size (int and >= 0) - ";
+						cin >> word;
+					} while (!Defender(word, q));
+
+					q = q % n;
+					system("cls");
+					flag = false;
+					course = '1';
+				}
+
+				if (course == 'z' || course == 'Z') {    //Изменить элемент
+
+					do {
+						cout << endl << "Do you want changed elem?" << endl;
+						cout << "z - Yes" << endl;
+						cout << "a - No" << endl;
+						cout << "Your choose - ";
+						cin >> course;
+
+						if (course != 'z' && course != 'a' && course != 'Z' && course != 'A') system("cls");
+
+					} while (course != 'z' && course != 'a' && course != 'Z' && course != 'A');
+
+					if (course == 'z' || course == 'Z') {
+						cout << endl << "Enter new element - ";
+						cin >> t;
+						m = 0;
+
+						A.SeeElemLeft(bracket);
+						cout << bracket << endl;
+						flag = true;
+
+						if (bracket == buf) {
+							q++;
+							flag = false;
+						}
+
+						while (m < q) {
+							A.GetElemLeft(bracket);
+							A.AddElemRight(bracket);
+
+							if (bracket == buf && flag) q++;
+
+							flag = true;
+							m++;
+						}
+
+						A.ChangeElemLeft(t);
+
+						while (m > 0) {
+							A.GetElemRight(bracket);
+							A.AddElemLeft(bracket);
+							m--;
+						}
+
+					}
+
+					flag = false;
+					course = '1';
+				}
+
+				if (course == 'e') {  //выход	
+
+					do {
+						cout << endl << "Do you want exit?" << endl;
+						cout << endl << "0 - Yes" << endl;
+						cout << endl << "q - No" << endl;
+						cout << endl << "Your choose - ";
+						cin >> course;
+
+						if (course != '0' && course != 'q' && course != 'Q') system("cls");
+
+					} while (course != '0' && course != 'q' && course != 'Q');
+
+					flag = false;
+				}
+
+				if (flag) {
+					cout << endl << "Instruction:    [4] - Left, [6] - Right" << endl;
+					cout << "[e] - exit,   [m] - move to element,   [z] - change this element" << endl;
+					num = q + 1;
+					cout << "Element: " << elem << "       Number: " << num << endl;
+					cout << "Your choose - ";
+					cin >> course;
+				}
+
+			} while (course != '0');
+
+		}
+
+		if (error != 0) cout << endl << "Error with watched of Dec!";
+	}
+
+	/*	for (i = start; i < finish;) {
+	A.GetElemLeft(x);
+	error = A.GetError();
+
+	if (error != 0) i = n;
+
+	if (x != buf) {
+	arr[i] = x;
+	i++;
+	}
+
+	A.AddElemRight(x);
+	error = A.GetError();
+
+	if (error != 0) i = n;
+
+	}
+
+	if (error == 0) {
+	char t, word[N], bracket, course = '1';
+	int i, xx = 0, m, q, num;
+	bool flag;
+
+	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	do {
+	flag = true;
+	system("cls");
+
+	for (i = start; i < finish; i++) {
+
+	if (i == start) {
+
+	if ((i < n - 1) && (i >= 0)) q = i;
+
+	if ((i >= n - 1) || (i < 0)) q = i % (n - 1);
+
+	if (q < 0) q = n - 1 + q;
+
+	SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_INTENSITY);
+	bracket = 91;
+	cout << bracket << arr[q];
+	bracket = 93;
+	cout << bracket;
+	SetConsoleTextAttribute(h, FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED | FOREGROUND_INTENSITY);
+	}
+	else {
+
+	if ((i < n - 1) && (i >= 0)) m = i;
+
+	if ((i >= n - 1) || (i < 0)) m = i % (n - 1);
+
+	if (m < 0) m = n - 1 + m;
+
+	bracket = 32;
+	cout << bracket << arr[m] << bracket;
+	}
+
+
+	}
+
+	if (course == '4') {    //Влево
+	start--;
+	finish--;
+	flag = false;
+	course = '1';
+	}
+
+	if (course == '6') {    //Вправо
+	start++;
+	finish++;
+	flag = false;
+	course = '1';
+	}
+
+	if (course == 'm' || course == 'M') {    //Переместиться к элементу
+
+	do {
+	cout << endl << "Enter number of element in Dec in the mod size (int and >= 0) - ";
+	cin >> word;
+	} while (!Defender(word, start));
+
+	finish = start + n - 1;
+
+	system("cls");
+	flag = false;
+	course = '1';
+	}
+
+	if (course == 'z' || course == 'Z') {    //Изменить элемент
+
+	do {
+	cout << endl << "Do you want changed elem?" << endl;
+	cout << "z - Yes" << endl;
+	cout << "a - No" << endl;
+	cout << "Your choose - ";
+	cin >> course;
+
+	if (course != 'z' && course != 'a' && course != 'Z' && course != 'A') system("cls");
+
+	} while (course != 'z' && course != 'a' && course != 'Z' && course != 'A');
+
+	if (course == 'z' || course == 'Z') {
+	cout << endl << "Enter new element - ";
+	cin >> t;
+	m = 0;
+
+	if (arr[q] != t) {
+	arr[q] = t;
+	A.SeeElemLeft(bracket);
+	cout << bracket << endl;
+	flag = true;
+
+	if (bracket == buf) {
+	q++;
+	flag = false;
+	}
+
+	while (m < q) {
+	A.GetElemLeft(bracket);
+	A.AddElemRight(bracket);
+
+	if (bracket == buf && flag) q++;
+
+	flag = true;
+	m++;
+	}
+
+	A.ChangeElemLeft(t);
+
+	while (m > 0) {
+	A.GetElemRight(bracket);
+	A.AddElemLeft(bracket);
+	m--;
+	}
+
+	}
+
+	}
+
+	flag = false;
+	course = '1';
+	}
+
+	if (course == 'e') {  //выход
+
+	do {
+	cout << endl << "Do you want exit?" << endl;
+	cout << endl << "0 - Yes" << endl;
+	cout << endl << "q - No" << endl;
+	cout << endl << "Your choose - ";
+	cin >> course;
+
+	if (course != '0' && course != 'q' && course != 'Q') system("cls");
+
+	} while (course != '0' && course != 'q' && course != 'Q');
+
+	flag = false;
+	}
+
+	if (flag) {
+	cout << endl << "Instruction:    [4] - Left, [6] - Right" << endl;
+	cout << "[e] - exit,   [m] - move to element,   [z] - change this element" << endl;
+	num = q + 1;
+	cout << "Element: " << arr[q] << "       Number: " << num << endl;
+	cout << "Your choose - ";
+	cin >> course;
+	}
+
+	} while (course != '0');
+
+	delete[] arr;
+	}
+
+	if (error != 0) cout << endl << "Error with watched of Dec!";
+
+	}*/
+
+}
+
+
+
+bool Palindrom(DEC A, int n) {
+
+	/*Проверяет является ли слово перевертышем.
+	На вход поступает длина слова и само слово.
+	Возвращает true - если является палиндромом,
+	false - иначе*/
+
+	if (A.Create()) {
+		int left = A.GetLeft();
+		int right = A.GetRight() + 1;
+		char x, q, buf;
+		int error = 0;
+		A.SeeElemLeft(buf);
+
+		do {
+
+			do {
+				A.GetElemLeft(x);
+				error = A.GetError();
+				left++;
+			} while (x == buf && error == 0);
+
+			if (left != right) {
+
+				if (error == 0) {
+
+					do {
+						A.GetElemRight(q);
+						error = A.GetError();
+						right--;
+					} while (q == buf && error == 0);
+
+				}
+
+				if (x >= 'A' && x <= 'Z') x = x + 32;             //Делаем символы нижнего регистра одновременно
+
+				if (q >= 'A' && q <= 'Z') q = q + 32;
+
+
+				if (x != q) {
+					error = 1;
+				}
+
+			}
+
+		} while ((left != right) && (error == 0));
+
+		if (error == 0) return true;
+		else return false;
+
+	}
+	else return false;
+
+}
+
+
+
+void main()
+{
+
+	/*Тестирующая программа, включающая
+	в себя реализацию класса DEC и алгоритма
+	его обработки */
+
+	DEC A(1);      //вспомогательный Дек
+	char name_file[N], x, charmenu[N];
+	int error, main_menu, side_menu, returnIn = -1, n, method, left, right;
+	bool create = false, fill = false, need = true, name_save;
+
+	do {
+
+		if (need) {       //Простейшее меню
+
+			do {
+				system("cls");
+				cout << "1. Create new Dec" << endl;
+				cout << "2. Filled Dec" << endl;
+				cout << "3. Watched Dec" << endl;
+				cout << "4. AlgoritmOfPalindrom" << endl;
+				cout << "5. Saved in file" << endl;
+				cout << "0. Exit" << endl;
+				cout << "Your choose - ";
+				cin >> charmenu;
+			} while (!Defender(charmenu, main_menu));
+
+		}
+
+		need = true;
+
+		if (main_menu == 1) {
+
+			/*Создание нового Дека*/
+
+			side_menu = 2;
+
+			if (create && fill) {
+
+				if (need) {
+
+					do {
+
+						do {
+							system("cls");
+							cout << "Old datas will forgoted!" << endl;
+							cout << "1. Back" << endl;
+							cout << "2. Continue without saved in file (DEC will deleted!)" << endl;
+							cout << "3. Continue with saved in file" << endl;
+							cout << "Your choose - ";
+							cin >> charmenu;
+						} while (!Defender(charmenu, side_menu));
+
+					} while (!(side_menu == 1 || side_menu == 2 || side_menu == 3));
+
+				}
+
+				if (side_menu == 2) {     //без сохранения
+					system("cls");
+					A.destruct();
+					create = false;
+					fill = false;
+					cout << "Dec deleted!";
+					_getch();
+				}
+
+				if (side_menu == 3) {    //с сохранением
+					main_menu = 5;
+					returnIn = 1;
+					side_menu = 2;
+				}
+
+			}
+
+			if (side_menu != 1 && main_menu == 1) {
+
+				do {
+
+					do {
+						system("cls");
+						cout << "Enter method of created of Dec" << endl;
+						cout << "1. Back" << endl;
+						cout << "2. From user" << endl;
+						cout << "3. From file" << endl;
+						cout << "Your choose - ";
+						cin >> charmenu;
+					} while (!Defender(charmenu, method));
+
+				} while (!(method == 1 || method == 2 || method == 3));
+
+				if (method == 2) {    //создание пользователем
+
+									  //n = 1;
+
+					do {
+
+						do {
+
+							system("cls");
+							cout << "Enter max lenght of Dec ( int and > 0 ) - ";
+							cin >> charmenu;
+
+							if (n <= 0 && !Defender(charmenu, n)) {
+								system("cls");
+								cout << "Incorrected datas!" << endl;
+								_getch();
+							}
+
+						} while (!Defender(charmenu, n));
+
+					} while (n <= 0);
+
+					DEC B(n);
+					error = B.GetError();
+					system("cls");
+
+					if (error != 0) cout << "Error with created Dec!";
+					else {
+						A.destruct();
+						A = B;
+						create = true;
+						cout << "Dec succesfully created!";
+					}
+
+				}
+
+				if (method == 3) {        //создание из файла
+
+					do {
+						system("cls");
+						name_save = false;
+						cout << "Enter name of file - ";
+						cin >> name_file;
+						cout << endl << "Please wait" << endl;
+
+						name_save = File_fill(A, name_file, error, n);
+
+						if (!name_save) {   //ошибка сохранения
+
+							cout << endl << "Error with name. Enter new name " << endl;
+							cout << "1. Back" << endl;
+							cout << "2. Retry" << endl;
+							cout << "Your choose - ";
+							cin >> charmenu;
+							name_save = Defender(charmenu, side_menu);
+
+							if (name_save && side_menu != 1) name_save = false;
+
+						}
+
+					} while (!name_save && side_menu != 1);
+
+					if (error == 0 && side_menu != 1) {
+						create = true;
+						fill = true;
+						cout << "Dec succesfully created!";
+					}
+
+				}
+
+			}
+
+			_getch();
+		}
+
+		if (main_menu == 2) {
+
+			/*Заполнение Дека*/
+
+			system("cls");
+			side_menu = 2;
+
+			if (create && fill) {
+
+				if (need) {
+
+					do {
+
+						do {
+							system("cls");
+							cout << "Old datas will forgoted!" << endl;
+							cout << "1. Back" << endl;
+							cout << "2. Continue without saved in file (DEC will unfilled!)" << endl;
+							cout << "3. Continue with saved in file" << endl;
+							cout << "Your choose - ";
+							cin >> charmenu;
+						} while (!Defender(charmenu, side_menu));
+
+					} while (!(side_menu == 1 || side_menu == 2 || side_menu == 3));
+
+				}
+
+				if (side_menu == 2) {     //без сохранения
+					left = A.GetLeft();
+					right = A.GetRight();
+					system("cls");
+
+					while (left != right) {
+						A.DelElemRight();
+						error = A.GetError();
+						right--;
+
+						if (error != 0) left = right;
+
+					}
+
+					if (error != 0) cout << "Error with deleted old datas!";
+					else {
+						cout << "Old datas deleted!";
+						fill = false;
+					}
+
+					_getch();
+
+				}
+
+				if (side_menu == 3) {    //с сохранением
+					main_menu = 5;
+					returnIn = 1;
+					side_menu = 2;
+				}
+
+			}
+
+			if (side_menu != 1 && main_menu == 2 && create) {
+
+				bool full = A.IsFull();
+
+				while (!full) {
+					system("cls");
+					cout << "Enter elem (from left to right) - ";
+					cin >> x;
+					A.AddElemRight(x);
+					error = A.GetError();
+					full = A.IsFull();
+
+					if (error != 0) full = true;
+
+				}
+
+				left = A.GetLeft();
+				right = A.GetRight();
+				system("cls");
+
+				if (error != 0) {
+					cout << "Error with filled of Dec!";
+				}
+				else {
+					cout << "Dec filled!";
+					fill = true;
+				}
+
+			}
+
+			if (!create) cout << "You must created Dec!";
+
+			_getch();
+		}
+
+		if (main_menu == 3) {
+
+			/*Вывод Дека*/
+
+			system("cls");
+
+			if (fill && create) Output(A, n);
+			else cout << "Nothing watching";
+
+			_getch();
+		}
+
+
+		if (main_menu == 4) {
+
+			/*Является ли слово перевертышем? (палиндромом)*/
+
+			system("cls");
+
+			if (create && fill) {
+
+				if (Palindrom(A, n)) cout << "This word - palindrom";
+				else cout << "This word - not palindrom";
+
+			}
+			else cout << "Word not exist";
+
+			_getch();
+		}
+
+		if (main_menu == 5) {
+
+			/*Сохранение Дека в файл*/
+
+			system("cls");
+
+			if (create && fill) {
+
+				if (main_menu != returnIn) {   //если надо вернуться куда-то
+					need = false;
+					main_menu = returnIn;
+				}
+
+				do {
+					system("cls");
+					name_save = false;
+					cout << "Enter name of file - ";
+					cin >> name_file;
+					cout << endl << "Please wait" << endl;
+					name_save = Saving(A, name_file, n);
+
+					if (!name_save) {         //ошибка сохранения
+						cout << endl << "Error with name. Enter new name " << endl;
+						cout << "1. Back" << endl;
+						cout << "2. Retry" << endl;
+						cout << "Your choose - ";
+						cin >> charmenu;
+						name_save = Defender(charmenu, side_menu);
+
+						if (name_save && side_menu != 1) name_save = false;
+
+					}
+
+				} while (!name_save && side_menu != 1);
+
+				if (name_save && side_menu != 1) cout << "Dec saving!";
+			}
+			else cout << "Nothing saving";
+
+			_getch();
+
+		}
+
+		if (main_menu == 0) {
+
+			/*Выход*/
+
+			if (create && fill) {
+
+				if (need) {
+
+					do {
+
+						do {
+							system("cls");
+							cout << "All datas will forgoted!" << endl;
+							cout << "1. Back" << endl;
+							cout << "2. Continue without saved in file" << endl;
+							cout << "3. Continue with saved in file" << endl;
+							cout << "Your choose - ";
+							cin >> charmenu;
+						} while (!Defender(charmenu, side_menu));
+
+					} while (!(side_menu == 1 || side_menu == 2 || side_menu == 3));
+
+				}
+
+				if (side_menu == 1) {   //назад
+					cout << endl << "Annulment of exit!";
+					main_menu = -1;
+				}
+
+				if (side_menu == 2) {   //без сохранения
+					A.destruct();
+					create = false;
+					fill = false;
+					main_menu = 0;
+					side_menu = 0;
+					cout << endl << "Dec deleted!";
+				}
+
+				if (side_menu == 3) {   //с сохранением
+					need = false;
+					main_menu = 5;
+					returnIn = 0;
+					side_menu = 2;
+				}
+
+				_getch();
+			}
+			else {
+
+				do {
+
+					do {
+						system("cls");
+						cout << "Do you want exit?" << endl;
+						cout << "1. Yes" << endl;
+						cout << "2. No" << endl;
+						cout << "Your choose - ";
+						cin >> charmenu;
+					} while (!Defender(charmenu, side_menu));
+
+				} while (!(side_menu == 1 || side_menu == 2));
+
+				if (side_menu == 2) main_menu = -1;
+
+			}
+
+		}
+
+	} while (main_menu != 0);
+
+	cout << endl << "END WORK!";
+	_getch();
+	return;
+}
